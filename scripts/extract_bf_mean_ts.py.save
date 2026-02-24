@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import sys
+import numpy as np
+import nibabel as nib
+
+
+fmri_nii = sys.argv[1]
+bf_mask_nii = sys.argv[2]
+out_txt = sys.argv[3]
+
+# load fMRI
+img = nib.load(fmri_nii)
+data = img.get_fdata()  # (X,Y,Z,T)
+
+if data.ndim != 4:
+    raise ValueError("Input fMRI must be 4D")
+
+X, Y, Z, T = data.shape
+
+# load BF mask
+m = nib.load(bf_mask_nii)
+mask = m.get_fdata() > 0
+
+if mask.shape != (X, Y, Z):
+    raise ValueError("BF mask and fMRI spatial shape do not match")
+
+# reshape fMRI to (T, N_vox)
+fmri_2d = data.reshape(-1, T).T
+
+# flatten mask
+mask_1d = mask.reshape(-1)
+
+# extract BF voxels
+bf_ts = fmri_2d[:, mask_1d]
+
+if bf_ts.shape[1] == 0:
+    raise ValueError("BF mask contains no voxels")
+
+# average across BF voxels
+bf_mean = bf_ts.mean(axis=1)
+
+# z-score (optional but recommended)
+bf_mean = (bf_mean - bf_mean.mean()) / bf_mean.std()
+
+# save
+np.savetxt(out_txt, bf_mean, fmt="%.6f")
+
+print("Saved BF mean timeseries:", out_txt)
+print("Timepoints:", bf_mean.shape[0])
+print("BF voxels:", bf_ts.shape[1])

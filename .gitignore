@@ -1,0 +1,9 @@
+results/
+data/
+.snakemake/
+*.nii
+*.nii.gz
+*.npz
+*.log
+__pycache__/
+.ipynb_checkpoints/
